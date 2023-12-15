@@ -1,5 +1,3 @@
-
-
 import pickle as pkl
 import sys
 import torch
@@ -10,7 +8,6 @@ if __name__ == "__main__":
     obj = torch.load(input, map_location="cpu")
     #  obj = obj["state_dict"]
     obj = obj["teacher"]
-    
 
     newmodel = {}
     for k, v in obj.items():
@@ -22,4 +19,4 @@ if __name__ == "__main__":
         k = k.replace("backbone.", "")
         print(old_k, "->", k)
         newmodel[k] = v
-    torch.save(newmodel,sys.argv[2])
+    torch.save(newmodel, sys.argv[2])

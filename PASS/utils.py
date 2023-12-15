@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -19,6 +18,7 @@ class GaussianBlur(object):
     """
     Apply Gaussian Blur to the PIL image.
     """
+
     def __init__(self, p=0.5, radius_min=0.1, radius_max=2.):
         self.prob = p
         self.radius_min = radius_min
@@ -40,6 +40,7 @@ class Solarization(object):
     """
     Apply Solarization to the PIL image.
     """
+
     def __init__(self, p):
         self.p = p
 
@@ -357,6 +358,7 @@ def get_sha():
 
     def _run(command):
         return subprocess.check_output(command, cwd=cwd).decode('ascii').strip()
+
     sha = 'N/A'
     diff = "clean"
     branch = 'N/A'
@@ -506,6 +508,7 @@ class LARS(torch.optim.Optimizer):
     """
     Almost copy-paste from https://github.com/facebookresearch/barlowtwins/blob/main/main.py
     """
+
     def __init__(self, params, lr=0, weight_decay=0, momentum=0.9, eta=0.001,
                  weight_decay_filter=None, lars_adaptation_filter=None):
         defaults = dict(lr=lr, weight_decay=weight_decay, momentum=momentum,
@@ -552,6 +555,7 @@ class MultiCropWrapper(nn.Module):
     concatenate all the output features and run the head forward on these
     concatenated features.
     """
+
     def __init__(self, backbone, head):
         super(MultiCropWrapper, self).__init__()
         # disable layers dedicated to ImageNet labels classification
@@ -568,7 +572,7 @@ class MultiCropWrapper(nn.Module):
             return_counts=True,
         )[1], 0)
         start_idx = 0
-        if len(idx_crops)==1:
+        if len(idx_crops) == 1:
             for end_idx in idx_crops:
                 _out = self.backbone(torch.cat(x[start_idx: end_idx]), part_index=None)
                 if start_idx == 0:
@@ -582,9 +586,8 @@ class MultiCropWrapper(nn.Module):
             output_pt1 = self.backbone(torch.cat(x[2:5]), part_index=0)
             output_pt2 = self.backbone(torch.cat(x[5:8]), part_index=1)
             output_pt3 = self.backbone(torch.cat(x[8:11]), part_index=2)
-            
+
             return self.head(output_g, None), self.head(output_pt1, 0), self.head(output_pt2, 1), self.head(output_pt3, 2)
-            
 
 
 def get_params_groups(model):

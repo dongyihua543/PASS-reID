@@ -1,4 +1,3 @@
-
 import math
 from functools import partial
 from itertools import repeat
@@ -15,11 +14,14 @@ def _ntuple(n):
         if isinstance(x, container_abcs.Iterable):
             return x
         return tuple(repeat(x, n))
+
     return parse
+
 
 IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 to_2tuple = _ntuple(2)
+
 
 def drop_path(x, drop_prob: float = 0., training: bool = False):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
@@ -40,9 +42,11 @@ def drop_path(x, drop_prob: float = 0., training: bool = False):
     output = x.div(keep_prob) * random_tensor
     return output
 
+
 class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
     """
+
     def __init__(self, drop_prob=None):
         super(DropPath, self).__init__()
         self.drop_prob = drop_prob
@@ -131,7 +135,7 @@ class Attention(nn.Module):
     def forward(self, x):
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[2]   # make torchscript happy (cannot use tensor as tuple)
+        q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
         attn = attn.softmax(dim=-1)
@@ -159,7 +163,6 @@ class Block(nn.Module):
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
     def forward(self, x, return_attention=False):
-    
         y, attn = self.attn(self.norm1(x))
         if return_attention:
             return attn
@@ -174,6 +177,7 @@ class Block(nn.Module):
 class PatchEmbed(nn.Module):
     """ Image to Patch Embedding
     """
+
     def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768):
         super().__init__()
         img_size = to_2tuple(img_size)
@@ -193,21 +197,23 @@ class PatchEmbed(nn.Module):
         x = self.proj(x).flatten(2).transpose(1, 2)
         return x
 
+
 class IBN(nn.Module):
     def __init__(self, planes):
         super(IBN, self).__init__()
-        half1 = int(planes/2)
+        half1 = int(planes / 2)
         self.half = half1
         half2 = planes - half1
         self.IN = nn.InstanceNorm2d(half1, affine=True)
         self.BN = nn.BatchNorm2d(half2)
-    
+
     def forward(self, x):
         split = torch.split(x, self.half, 1)
         out1 = self.IN(split[0].contiguous())
         out2 = self.BN(split[1].contiguous())
         out = torch.cat((out1, out2), 1)
-        return out   
+        return out
+
 
 class PatchEmbed_VOLO(nn.Module):
     """
@@ -251,13 +257,14 @@ class PatchEmbed_VOLO(nn.Module):
         if self.stem_conv:
             x = self.conv(x)
         x = self.proj(x)  # B, C, H, W
-        x = x.flatten(2).permute(0,2,1)
+        x = x.flatten(2).permute(0, 2, 1)
         return x
 
 
 class Ours_ViT(nn.Module):
     """ Transformer-based Object Re-Identification
     """
+
     def __init__(self, img_size=224, patch_size=16, stride_size=16, in_chans=3, num_classes=1000, embed_dim=768, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
                  drop_path_rate=0., hybrid_backbone=None, norm_layer=nn.LayerNorm):
@@ -265,8 +272,8 @@ class Ours_ViT(nn.Module):
         self.num_classes = num_classes
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
         self.img_size = to_2tuple(img_size)
-        self.patch_embed = PatchEmbed_VOLO(img_size=img_size,stem_conv=True, stem_stride=2
-                , patch_size=patch_size,in_chans=in_chans, hidden_dim=64,embed_dim=embed_dim)
+        self.patch_embed = PatchEmbed_VOLO(img_size=img_size, stem_conv=True, stem_stride=2
+                                           , patch_size=patch_size, in_chans=in_chans, hidden_dim=64, embed_dim=embed_dim)
 
         num_patches = self.patch_embed.num_patches
 
@@ -274,7 +281,7 @@ class Ours_ViT(nn.Module):
         self.part_token1 = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.part_token2 = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.part_token3 = nn.Parameter(torch.zeros(1, 1, embed_dim))
-        
+
         self.cls_pos = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.part1_pos = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.part2_pos = nn.Parameter(torch.zeros(1, 1, embed_dim))
@@ -301,14 +308,14 @@ class Ours_ViT(nn.Module):
         trunc_normal_(self.part1_pos, std=.02)
         trunc_normal_(self.part2_pos, std=.02)
         trunc_normal_(self.part3_pos, std=.02)
-        #trunc_normal_(self.part4_pos, std=.02)
-        #trunc_normal_(self.part5_pos, std=.02)
+        # trunc_normal_(self.part4_pos, std=.02)
+        # trunc_normal_(self.part5_pos, std=.02)
         trunc_normal_(self.cls_token, std=.02)
         trunc_normal_(self.part_token1, std=.02)
         trunc_normal_(self.part_token2, std=.02)
         trunc_normal_(self.part_token3, std=.02)
-        #trunc_normal_(self.part_token4, std=.02)
-        #trunc_normal_(self.part_token5, std=.02)
+        # trunc_normal_(self.part_token4, std=.02)
+        # trunc_normal_(self.part_token5, std=.02)
 
         self.apply(self._init_weights)
 
@@ -334,9 +341,9 @@ class Ours_ViT(nn.Module):
 
     def interpolate_pos_encoding(self, npatch, dim, h, w):
         N = self.pos_embed.shape[1]
-        if npatch == N and self.img_size == (h,w):
+        if npatch == N and self.img_size == (h, w):
             return self.pos_embed
-        
+
         patch_pos_embed = self.pos_embed
         OH = self.img_size[0] // self.patch_embed.patch_size
         OW = self.img_size[1] // self.patch_embed.patch_size
@@ -354,7 +361,6 @@ class Ours_ViT(nn.Module):
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return patch_pos_embed
 
-        
     def prepare_tokens(self, x, model_type, part_index):
         B, nc, w, h = x.shape
         x = self.patch_embed(x)  # patch linear embedding
@@ -366,46 +372,44 @@ class Ours_ViT(nn.Module):
             part_tokens2 = self.part_token2.expand(B, -1, -1)
             part_tokens3 = self.part_token3.expand(B, -1, -1)
             x = torch.cat((cls_tokens, part_tokens1, part_tokens2, part_tokens3, x), dim=1)
-    
+
             # add positional encoding to each token
             x = x + torch.cat((self.cls_pos, self.part1_pos, self.part2_pos, self.part3_pos, self.interpolate_pos_encoding(x.shape[1], x.shape[-1], w, h)), dim=1)
         else:
-            if part_index==0:
+            if part_index == 0:
                 cls_tokens = self.cls_token.expand(B, -1, -1)
                 part_tokens1 = self.part_token1.expand(B, -1, -1)
                 x = torch.cat((cls_tokens, part_tokens1, x), dim=1)
-        
+
                 # add positional encoding to each token
                 x = x + torch.cat((self.cls_pos, self.part1_pos, self.interpolate_pos_encoding(x.shape[1], x.shape[-1], w, h)), dim=1)
-            elif part_index==1:
+            elif part_index == 1:
                 cls_tokens = self.cls_token.expand(B, -1, -1)
                 part_tokens2 = self.part_token2.expand(B, -1, -1)
                 x = torch.cat((cls_tokens, part_tokens2, x), dim=1)
-        
+
                 # add positional encoding to each token
                 x = x + torch.cat((self.cls_pos, self.part2_pos, self.interpolate_pos_encoding(x.shape[1], x.shape[-1], w, h)), dim=1)
-            elif part_index==2:
+            elif part_index == 2:
                 cls_tokens = self.cls_token.expand(B, -1, -1)
                 part_tokens3 = self.part_token3.expand(B, -1, -1)
                 x = torch.cat((cls_tokens, part_tokens3, x), dim=1)
-        
+
                 # add positional encoding to each token
                 x = x + torch.cat((self.cls_pos, self.part3_pos, self.interpolate_pos_encoding(x.shape[1], x.shape[-1], w, h)), dim=1)
 
-        return self.pos_drop(x) 
+        return self.pos_drop(x)
 
-
-    
     def forward(self, x, model_type, part_index):
         x = self.prepare_tokens(x, model_type, part_index)
         for blk in self.blocks:
             x = blk(x)
         x = self.norm(x)
-        if model_type=='t':
+        if model_type == 't':
             return x[:, 0], x[:, 1], x[:, 2], x[:, 3]
         else:
             return x[:, 0], x[:, 1],
-            
+
     def get_last_selfattention(self, x):
         x = self.prepare_tokens(x, 't', None)
         for i, blk in enumerate(self.blocks):
@@ -441,7 +445,8 @@ class Ours_ViT(nn.Module):
             except:
                 print('===========================ERROR=========================')
                 print('shape do not match in k :{}: param_dict{} vs self.state_dict(){}'.format(k, v.shape, self.state_dict()[k].shape))
-        print('Load %d / %d layers.'%(count,len(self.state_dict().keys())))
+        print('Load %d / %d layers.' % (count, len(self.state_dict().keys())))
+
 
 def resize_pos_embed(posemb, posemb_new, hight, width):
     # Rescale the grid of position embeddings when loading from state_dict. Adapted from
@@ -460,17 +465,20 @@ def resize_pos_embed(posemb, posemb_new, hight, width):
     return posemb
 
 
-def ours_vit_small(img_size=(256, 128), patch_size=16, stride_size=16, drop_rate=0., attn_drop_rate=0.,drop_path_rate=0.0, **kwargs):
+def ours_vit_small(img_size=(256, 128), patch_size=16, stride_size=16, drop_rate=0., attn_drop_rate=0., drop_path_rate=0.0, **kwargs):
     #  kwargs.setdefault('qk_scale', 768 ** -0.5)
     print('ICS')
-    model = Ours_ViT(img_size=img_size, patch_size=patch_size, stride_size=stride_size, embed_dim=384, depth=12, num_heads=6,  mlp_ratio=4., qkv_bias=True, drop_path_rate = drop_path_rate, drop_rate=drop_rate, attn_drop_rate=attn_drop_rate, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    model = Ours_ViT(img_size=img_size, patch_size=patch_size, stride_size=stride_size, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4., qkv_bias=True, drop_path_rate=drop_path_rate, drop_rate=drop_rate, attn_drop_rate=attn_drop_rate,
+                     norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
 
-def ours_vit_base(img_size=(256, 128), patch_size=16, stride_size=16, drop_rate=0., attn_drop_rate=0.,drop_path_rate=0.0, **kwargs):
+def ours_vit_base(img_size=(256, 128), patch_size=16, stride_size=16, drop_rate=0., attn_drop_rate=0., drop_path_rate=0.0, **kwargs):
     print('ICS')
-    model = Ours_ViT(img_size=img_size, patch_size=patch_size, stride_size=stride_size, embed_dim=768, depth=12, num_heads=12,  mlp_ratio=4., qkv_bias=True, drop_path_rate = drop_path_rate, drop_rate=drop_rate, attn_drop_rate=attn_drop_rate, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    model = Ours_ViT(img_size=img_size, patch_size=patch_size, stride_size=stride_size, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4., qkv_bias=True, drop_path_rate=drop_path_rate, drop_rate=drop_rate, attn_drop_rate=attn_drop_rate,
+                     norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
+
 
 def _no_grad_trunc_normal_(tensor, mean, std, a, b):
     # Cut & paste from PyTorch official master until it's in a few official releases - RW
@@ -481,7 +489,7 @@ def _no_grad_trunc_normal_(tensor, mean, std, a, b):
 
     if (mean < a - 2 * std) or (mean > b + 2 * std):
         print("mean is more than 2 std from [a, b] in nn.init.trunc_normal_. "
-                      "The distribution of values may be incorrect.",)
+              "The distribution of values may be incorrect.", )
 
     with torch.no_grad():
         # Values are generated by using a truncated uniform distribution and

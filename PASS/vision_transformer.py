@@ -1,4 +1,3 @@
-
 import math
 from functools import partial
 
@@ -23,6 +22,7 @@ def drop_path(x, drop_prob: float = 0., training: bool = False):
 class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
     """
+
     def __init__(self, drop_prob=None):
         super(DropPath, self).__init__()
         self.drop_prob = drop_prob
@@ -101,6 +101,7 @@ class Block(nn.Module):
 class PatchEmbed(nn.Module):
     """ Image to Patch Embedding
     """
+
     def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768):
         super().__init__()
         num_patches = (img_size[0] // patch_size) * (img_size[1] // patch_size)
@@ -118,7 +119,8 @@ class PatchEmbed(nn.Module):
 
 class VisionTransformer(nn.Module):
     """ Vision Transformer """
-    def __init__(self, img_size=(224,224), patch_size=16, in_chans=3, num_classes=0, embed_dim=768, depth=12,
+
+    def __init__(self, img_size=(224, 224), patch_size=16, in_chans=3, num_classes=0, embed_dim=768, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
                  drop_path_rate=0., norm_layer=nn.LayerNorm, **kwargs):
         super().__init__()
@@ -133,7 +135,7 @@ class VisionTransformer(nn.Module):
         self.part_token1 = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.part_token2 = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.part_token3 = nn.Parameter(torch.zeros(1, 1, embed_dim))
-        
+
         self.cls_pos = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.part1_pos = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.part2_pos = nn.Parameter(torch.zeros(1, 1, embed_dim))
@@ -172,34 +174,34 @@ class VisionTransformer(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     #  def interpolate_pos_encoding(self, x, w, h):
-        #  npatch = x.shape[1] - 1
-        #  N = self.pos_embed.shape[1] - 1
-        #  if npatch == N and w == h:
-            #  return self.pos_embed
-        #  class_pos_embed = self.pos_embed[:, 0]
-        #  patch_pos_embed = self.pos_embed[:, 1:]
-        #  dim = x.shape[-1]
-        #  w0 = w // self.patch_embed.patch_size
-        #  h0 = h // self.patch_embed.patch_size
-        #  # we add a small number to avoid floating point error in the interpolation
-        #  # see discussion at https://github.com/facebookresearch/dino/issues/8
-        #  w0, h0 = w0 + 0.1, h0 + 0.1
-        #  from IPython import embed
-        #  embed()
-        #  patch_pos_embed = nn.functional.interpolate(
-            #  patch_pos_embed.reshape(1, int(math.sqrt(N)), int(math.sqrt(N)), dim).permute(0, 3, 1, 2),
-            #  scale_factor=(w0 / math.sqrt(N), h0 / math.sqrt(N)),
-            #  mode='bicubic',
-        #  )
-        #  assert int(w0) == patch_pos_embed.shape[-2] and int(h0) == patch_pos_embed.shape[-1]
-        #  patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        #  return torch.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
+    #  npatch = x.shape[1] - 1
+    #  N = self.pos_embed.shape[1] - 1
+    #  if npatch == N and w == h:
+    #  return self.pos_embed
+    #  class_pos_embed = self.pos_embed[:, 0]
+    #  patch_pos_embed = self.pos_embed[:, 1:]
+    #  dim = x.shape[-1]
+    #  w0 = w // self.patch_embed.patch_size
+    #  h0 = h // self.patch_embed.patch_size
+    #  # we add a small number to avoid floating point error in the interpolation
+    #  # see discussion at https://github.com/facebookresearch/dino/issues/8
+    #  w0, h0 = w0 + 0.1, h0 + 0.1
+    #  from IPython import embed
+    #  embed()
+    #  patch_pos_embed = nn.functional.interpolate(
+    #  patch_pos_embed.reshape(1, int(math.sqrt(N)), int(math.sqrt(N)), dim).permute(0, 3, 1, 2),
+    #  scale_factor=(w0 / math.sqrt(N), h0 / math.sqrt(N)),
+    #  mode='bicubic',
+    #  )
+    #  assert int(w0) == patch_pos_embed.shape[-2] and int(h0) == patch_pos_embed.shape[-1]
+    #  patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
+    #  return torch.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
     def interpolate_pos_encoding(self, npatch, dim, h, w):
         N = self.pos_embed.shape[1]
-        if npatch == N and self.img_size == (h,w):
+        if npatch == N and self.img_size == (h, w):
             return self.pos_embed
-        
+
         patch_pos_embed = self.pos_embed
         OH = self.img_size[0] // self.patch_embed.patch_size
         OW = self.img_size[1] // self.patch_embed.patch_size
@@ -228,29 +230,29 @@ class VisionTransformer(nn.Module):
             part_tokens2 = self.part_token2.expand(B, -1, -1)
             part_tokens3 = self.part_token3.expand(B, -1, -1)
             x = torch.cat((cls_tokens, part_tokens1, part_tokens2, part_tokens3, x), dim=1)
-    
+
             # add positional encoding to each token
             x = x + torch.cat((self.cls_pos, self.part1_pos, self.part2_pos, self.part3_pos, self.interpolate_pos_encoding(x.shape[1], x.shape[-1], w, h)), dim=1)
         else:
-            if part_index==0:
+            if part_index == 0:
                 cls_tokens = self.cls_token.expand(B, -1, -1)
                 part_tokens1 = self.part_token1.expand(B, -1, -1)
                 x = torch.cat((cls_tokens, part_tokens1, x), dim=1)
-        
+
                 # add positional encoding to each token
                 x = x + torch.cat((self.cls_pos, self.part1_pos, self.interpolate_pos_encoding(x.shape[1], x.shape[-1], w, h)), dim=1)
-            elif part_index==1:
+            elif part_index == 1:
                 cls_tokens = self.cls_token.expand(B, -1, -1)
                 part_tokens2 = self.part_token2.expand(B, -1, -1)
                 x = torch.cat((cls_tokens, part_tokens2, x), dim=1)
-        
+
                 # add positional encoding to each token
                 x = x + torch.cat((self.cls_pos, self.part2_pos, self.interpolate_pos_encoding(x.shape[1], x.shape[-1], w, h)), dim=1)
-            elif part_index==2:
+            elif part_index == 2:
                 cls_tokens = self.cls_token.expand(B, -1, -1)
                 part_tokens3 = self.part_token3.expand(B, -1, -1)
                 x = torch.cat((cls_tokens, part_tokens3, x), dim=1)
-        
+
                 # add positional encoding to each token
                 x = x + torch.cat((self.cls_pos, self.part3_pos, self.interpolate_pos_encoding(x.shape[1], x.shape[-1], w, h)), dim=1)
 
@@ -261,11 +263,10 @@ class VisionTransformer(nn.Module):
         for blk in self.blocks:
             x = blk(x)
         x = self.norm(x)
-        if part_index==None:
+        if part_index == None:
             return x[:, 0], x[:, 1], x[:, 2], x[:, 3]
         else:
             return x[:, 0], x[:, 1]
-                
 
     def get_last_selfattention(self, x):
         x = self.prepare_tokens(x, None)
@@ -275,7 +276,6 @@ class VisionTransformer(nn.Module):
             else:
                 # return attention of the last block
                 return blk(x, return_attention=True)
-    
 
     def get_intermediate_layers(self, x, n=1):
         x = self.prepare_tokens(x)
@@ -327,7 +327,7 @@ class DINOHead(nn.Module):
                 layers.append(nn.GELU())
             layers.append(nn.Linear(hidden_dim, bottleneck_dim))
             self.mlp_cls = nn.Sequential(*layers)
-            
+
             layers = [nn.Linear(in_dim, hidden_dim)]
             if use_bn:
                 layers.append(nn.BatchNorm1d(hidden_dim))
@@ -339,7 +339,7 @@ class DINOHead(nn.Module):
                 layers.append(nn.GELU())
             layers.append(nn.Linear(hidden_dim, bottleneck_dim))
             self.mlp_pt1 = nn.Sequential(*layers)
-            
+
             layers = [nn.Linear(in_dim, hidden_dim)]
             if use_bn:
                 layers.append(nn.BatchNorm1d(hidden_dim))
@@ -351,7 +351,7 @@ class DINOHead(nn.Module):
                 layers.append(nn.GELU())
             layers.append(nn.Linear(hidden_dim, bottleneck_dim))
             self.mlp_pt2 = nn.Sequential(*layers)
-            
+
             layers = [nn.Linear(in_dim, hidden_dim)]
             if use_bn:
                 layers.append(nn.BatchNorm1d(hidden_dim))
@@ -363,21 +363,21 @@ class DINOHead(nn.Module):
                 layers.append(nn.GELU())
             layers.append(nn.Linear(hidden_dim, bottleneck_dim))
             self.mlp_pt3 = nn.Sequential(*layers)
-            
+
         self.apply(self._init_weights)
-        
+
         self.last_layer_cls = nn.utils.weight_norm(nn.Linear(bottleneck_dim, out_dim, bias=False))
         self.last_layer_cls.weight_g.data.fill_(1)
-        
+
         self.last_layer_pt1 = nn.utils.weight_norm(nn.Linear(bottleneck_dim, out_dim, bias=False))
         self.last_layer_pt1.weight_g.data.fill_(1)
-        
+
         self.last_layer_pt2 = nn.utils.weight_norm(nn.Linear(bottleneck_dim, out_dim, bias=False))
         self.last_layer_pt2.weight_g.data.fill_(1)
-        
+
         self.last_layer_pt3 = nn.utils.weight_norm(nn.Linear(bottleneck_dim, out_dim, bias=False))
         self.last_layer_pt3.weight_g.data.fill_(1)
-        
+
         if norm_last_layer:
             self.last_layer_cls.weight_g.requires_grad = False
             self.last_layer_pt1.weight_g.requires_grad = False
@@ -391,48 +391,43 @@ class DINOHead(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def forward(self, x, part_index):
-        if part_index==None:
+        if part_index == None:
             cls = self.mlp_cls(x[0])
             cls = nn.functional.normalize(cls, dim=-1, p=2)
             cls = self.last_layer_cls(cls)
-            
+
             pt1 = self.mlp_pt1(x[1])
             pt1 = nn.functional.normalize(pt1, dim=-1, p=2)
             pt1 = self.last_layer_pt1(pt1)
-            
+
             pt2 = self.mlp_pt2(x[2])
             pt2 = nn.functional.normalize(pt2, dim=-1, p=2)
             pt2 = self.last_layer_pt2(pt2)
-            
+
             pt3 = self.mlp_pt3(x[3])
             pt3 = nn.functional.normalize(pt3, dim=-1, p=2)
             pt3 = self.last_layer_pt3(pt3)
-            
+
             return cls, pt1, pt2, pt3
-        
+
         else:
-            
+
             cls = self.mlp_cls(x[0])
             cls = nn.functional.normalize(cls, dim=-1, p=2)
             cls = self.last_layer_cls(cls)
-            
-            if part_index==0:
+
+            if part_index == 0:
                 pt1 = self.mlp_pt1(x[1])
                 pt1 = nn.functional.normalize(pt1, dim=-1, p=2)
                 pt1 = self.last_layer_pt1(pt1)
                 return cls, pt1
-            elif part_index==1:
+            elif part_index == 1:
                 pt2 = self.mlp_pt2(x[1])
                 pt2 = nn.functional.normalize(pt2, dim=-1, p=2)
                 pt2 = self.last_layer_pt2(pt2)
                 return cls, pt2
-            elif part_index==2:
+            elif part_index == 2:
                 pt3 = self.mlp_pt3(x[1])
                 pt3 = nn.functional.normalize(pt3, dim=-1, p=2)
                 pt3 = self.last_layer_pt3(pt3)
                 return cls, pt3
-            
-        
-        
-        
-        
